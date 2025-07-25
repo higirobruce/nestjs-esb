@@ -39,17 +39,62 @@ A simple but scalable Enterprise Service Bus implementation using NestJS and Pos
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL 12+
-- npm or yarn
+- Node.js 18+ (for local development)
+- Docker and Docker Compose (recommended)
+- PostgreSQL 12+ (if running locally without Docker)
+- npm or yarn (for local development)
 
-### Installation
+### Option 1: Docker Deployment (Recommended)
+
+#### Quick Start
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd nestjs-esb
+
+# Copy environment template
+cp .env.example .env
+
+# Start the application with Docker Compose
+docker-compose up --build
+```
+
+The application will be available at:
+- **ESB API**: http://localhost:4000
+- **PostgreSQL**: localhost:5432
+- **Redis**: localhost:6379
+
+#### Development with Docker
+
+```bash
+# Start development environment with hot reloading
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Additional services available:
+# - Database Admin (Adminer): http://localhost:8080
+# - Debug port: 9229
+```
+
+#### Production with Docker
+
+```bash
+# Start production environment
+docker-compose up --build -d
+
+# With Nginx reverse proxy (optional)
+docker-compose --profile production up --build -d
+```
+
+### Option 2: Local Development
+
+#### Installation
 
 ```bash
 npm install
 ```
 
-### Environment Variables
+#### Environment Variables
 
 Create a `.env` file:
 
@@ -62,13 +107,13 @@ DB_NAME=esb_db
 NODE_ENV=development
 ```
 
-### Database Setup
+#### Database Setup
 
 ```sql
 CREATE DATABASE esb_db;
 ```
 
-### Running the Application
+#### Running the Application
 
 ```bash
 # Development
@@ -265,6 +310,103 @@ Content-Type: application/json
 5. **Monitoring**: Integrate with monitoring systems
 6. **Message Queues**: Add support for external message brokers
 
+## Docker Infrastructure
+
+### Services Included
+
+1. **NestJS ESB Application**
+   - Multi-stage Docker build for production optimization
+   - Health checks and graceful shutdown
+   - Non-root user for security
+   - Hot reloading in development mode
+
+2. **PostgreSQL Database**
+   - Version 15 Alpine for smaller footprint
+   - Persistent data volumes
+   - Automatic database initialization
+   - Health checks and connection pooling
+
+3. **Redis Cache**
+   - Used for rate limiting and caching
+   - Persistent data storage
+   - Health monitoring
+
+4. **Nginx Reverse Proxy** (Production Profile)
+   - Load balancing and SSL termination
+   - Rate limiting and security headers
+   - Static file serving
+   - Production-ready configuration
+
+5. **Adminer** (Development Only)
+   - Web-based database management
+   - Available at http://localhost:8080
+
+### Docker Commands
+
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Start in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Stop all services
+docker-compose down
+
+# Remove volumes (caution: deletes data)
+docker-compose down -v
+
+# Scale the application (horizontal scaling)
+docker-compose up --scale app=3
+```
+
+### Environment Configuration
+
+The application uses environment variables for configuration. Copy `.env.example` to `.env` and modify as needed:
+
+```env
+# Database Configuration
+DB_HOST=db
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=your-secure-password
+DB_NAME=esb_db
+
+# Application Configuration
+NODE_ENV=production
+PORT=4000
+
+# Redis Configuration
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# Additional configurations...
+```
+
+### Production Deployment
+
+For production deployment:
+
+1. **Update environment variables** in `.env` with secure values
+2. **Enable Nginx profile** for reverse proxy:
+   ```bash
+   docker-compose --profile production up -d
+   ```
+3. **Configure SSL certificates** in the `ssl/` directory
+4. **Set up monitoring** and log aggregation
+5. **Configure backup** for PostgreSQL data volumes
+
+### Health Checks
+
+All services include health checks:
+- **Application**: HTTP endpoint at `/health`
+- **PostgreSQL**: Connection test with `pg_isready`
+- **Redis**: Ping command
+- **Nginx**: Service availability check
+
 ## Production Considerations
 
 1. **Security**: Implement proper authentication and authorization
@@ -273,3 +415,7 @@ Content-Type: application/json
 4. **Reliability**: Add circuit breakers and bulkhead patterns
 5. **Testing**: Add comprehensive unit and integration tests
 6. **Documentation**: API documentation with Swagger/OpenAPI
+7. **Container Security**: Regular image updates and vulnerability scanning
+8. **Backup Strategy**: Automated database backups and disaster recovery
+9. **Load Balancing**: Horizontal scaling with multiple application instances
+10. **SSL/TLS**: Proper certificate management and HTTPS enforcement
