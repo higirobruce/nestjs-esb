@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { ServiceStatus } from '../../common/enums/service-status.enum';
 
 class HealthCheckDto {
-  @IsUrl()
+  @IsString()
   url: string;
 
   @IsOptional()
@@ -20,7 +20,7 @@ export class RegisterServiceDto {
   @IsString()
   version: string;
 
-  @IsUrl()
+  @IsString()
   endpoint: string;
 
   @IsEnum(ServiceStatus)

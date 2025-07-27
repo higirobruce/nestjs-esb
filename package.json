@@ -20,6 +20,8 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/config": "^3.0.0",
     "@nestjs/event-emitter": "^2.0.0",
+    "@nestjs/axios": "^3.0.0",
+    "axios": "^1.4.0",
     "typeorm": "^0.3.17",
     "pg": "^8.11.0",
     "class-validator": "^0.14.0",

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -15,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - esb-network
     healthcheck:
@@ -40,7 +38,7 @@ services:
       DB_PASSWORD: password
       DB_NAME: esb_db
     ports:
-      - "4000:4000"
+      - "8000:4000"
     networks:
       - esb-network
     depends_on:

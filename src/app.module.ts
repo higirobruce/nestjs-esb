@@ -6,6 +6,7 @@ import { ServiceRegistryModule } from './service-registry/service-registry.modul
 import { ClientRegistryModule } from './client-registry/client-registry.module';
 import { MessageRoutingModule } from './message-routing/message-routing.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
+import { ServiceIntegrationModule } from './service-integration/service-integration.module';
 
 @Module({
   imports: [
@@ -21,12 +22,15 @@ import { OrchestrationModule } from './orchestration/orchestration.module';
       database: process.env.DB_NAME || 'esb_db',
       autoLoadEntities: true,
       synchronize: process.env.NODE_ENV !== 'production',
+      logging: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : false,
+      dropSchema: false, // Never drop schema automatically
     }),
     EventEmitterModule.forRoot(),
     ServiceRegistryModule,
     ClientRegistryModule,
     MessageRoutingModule,
     OrchestrationModule,
+    ServiceIntegrationModule,
   ],
 })
 export class AppModule {}

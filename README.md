@@ -8,6 +8,7 @@ A simple but scalable Enterprise Service Bus implementation using NestJS and Pos
 - **Client Registry**: Manage API clients with authentication and rate limiting
 - **Message Routing**: Route messages based on patterns and conditions
 - **Orchestration**: Define and execute complex workflows
+- **Service Integration**: Direct HTTP calls to services without messaging
 
 ## Architecture
 
@@ -34,6 +35,16 @@ A simple but scalable Enterprise Service Bus implementation using NestJS and Pos
    - Step-by-step process orchestration
    - Error handling and retry policies
    - Parallel and conditional execution
+
+5. **Service Integration Module**
+   - Direct HTTP calls to registered services via service discovery
+   - Standalone HTTP calls to external APIs
+   - Comprehensive request/response logging and tracking
+   - Intelligent retry mechanisms with exponential backoff
+   - Real-time performance metrics and success rate statistics
+   - Client authentication and authorization integration
+   - Correlation ID tracking across service calls
+   - Configurable timeouts and circuit breaker patterns
 
 ## Setup
 
@@ -290,6 +301,127 @@ Content-Type: application/json
   }
 }
 ```
+
+### Service Integration (Direct HTTP Calls)
+
+The Service Integration module provides two primary methods for making HTTP calls:
+
+1. **Service-based calls**: Calls to services registered in the service registry
+2. **Direct calls**: Direct HTTP calls to any URL
+
+#### Call Registered Service
+
+This endpoint automatically resolves the service endpoint from the service registry and makes the call:
+
+```http
+POST /integration/call-service
+Content-Type: application/json
+
+{
+  "serviceName": "user-service",
+  "serviceVersion": "1.0.0",
+  "method": "POST",
+  "path": "/users",
+  "correlationId": "req-123",
+  "clientId": "mobile-app-client",
+  "headers": {
+    "Authorization": "Bearer token123"
+  },
+  "body": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  "maxRetries": 3,
+  "timeoutMs": 30000
+}
+```
+
+**Features:**
+- Automatic service endpoint resolution
+- Service version targeting
+- Client validation and authorization
+
+#### Direct HTTP Call
+
+This endpoint allows direct HTTP calls to any URL without service registry lookup:
+
+```http
+POST /integration/direct-call
+Content-Type: application/json
+
+{
+  "url": "https://api.example.com/users",
+  "method": "GET",
+  "correlationId": "req-124",
+  "headers": {
+    "Authorization": "Bearer token123"
+  },
+  "queryParams": {
+    "limit": "10",
+    "offset": "0"
+  },
+  "maxRetries": 2,
+  "timeoutMs": 15000
+}
+```
+
+**Features:**
+- Direct URL targeting
+- Support for all HTTP methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+- Query parameter handling
+- Custom header support
+
+#### Get Service Call Details
+```http
+GET /integration/calls/{call-id}
+```
+
+#### Get Service Call History
+```http
+GET /integration/calls?correlationId=req-123&serviceName=user-service
+```
+
+#### Get Service Call Statistics
+```http
+GET /integration/stats?serviceName=user-service
+```
+
+Response:
+```json
+{
+  "totalCalls": 150,
+  "successCalls": 142,
+  "failedCalls": 8,
+  "successRate": 94.67,
+  "avgExecutionTimeMs": 1250
+}
+```
+
+### Service Integration Features
+
+#### Retry Logic
+- **Intelligent Retry**: Only retries on retryable errors (5xx, network errors, 408, 429)
+- **Exponential Backoff**: Delays between retries increase exponentially (max 10 seconds)
+- **Configurable Retries**: Up to 10 retry attempts per call
+- **Retry Tracking**: Each retry attempt is logged and tracked
+
+#### Error Handling
+- **Status Tracking**: All calls are tracked with status (pending, success, failed, timeout, cancelled)
+- **Error Categorization**: Distinguishes between client errors (4xx) and server errors (5xx)
+- **Detailed Logging**: Complete request/response details stored for debugging
+- **Event Emission**: Success and error events emitted for monitoring
+
+#### Performance Monitoring
+- **Execution Time Tracking**: Millisecond-precision timing for all calls
+- **Success Rate Calculation**: Real-time success rate statistics
+- **Call History**: Complete audit trail of all service interactions
+- **Correlation Tracking**: End-to-end request tracing with correlation IDs
+
+#### Security Features
+- **Client Validation**: Optional client ID validation against client registry
+- **Header Passthrough**: Custom authentication headers supported
+- **Request Sanitization**: Safe handling of request/response data
+- **Audit Trail**: Complete logging for security and compliance
 
 ## Scalability Features
 
