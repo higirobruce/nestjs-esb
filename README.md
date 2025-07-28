@@ -124,7 +124,7 @@ NODE_ENV=development
 CREATE DATABASE esb_db;
 ```
 
-#### Running the Application
+### Running the Application
 
 ```bash
 # Development
@@ -135,7 +135,238 @@ npm run build
 npm run start:prod
 ```
 
+## Testing Authentication System
+
+Follow these steps to test the authentication system:
+
+### 1. Start the Application
+   Ensure the application is running at `http://localhost:4000`.
+   
+   ```bash
+   npm run start:dev
+   ```
+
+### 2. Run the Authentication Tests
+
+#### Bash Script
+
+Run the `test-auth.sh` script, which installs `axios` temporarily and executes tests:
+```bash
+./test-auth.sh
+```
+
+#### Direct Execution
+
+Alternatively, you can run the Node.js test directly after installing required dependencies:
+```bash
+npm install axios --no-save
+node test-auth.js
+```
+
+### Test Coverage
+
+The test script verifies the following authentication features:
+- **Health Endpoint:** Public access verification
+- **JWT Login:** Token generation and expiration verification
+- **Profile Access:** Using JWT authentication
+- **Service Registry Access:** With JWT tokens
+- **API Key Authentication:** Secure API key retrieval and usage
+
+### Issues Fixed
+- **JWT Token Generation:** Resolved expiration settings conflict
+- **Password Hashing:** Optimized to avoid unnecessary rehashing
+- **API Key Exposure:** Secured key retrieval
+
+The authentication system should now be fully operational and secure.
+
+## Authentication
+
+The ESB now includes a comprehensive authentication system with:
+
+- **JWT-based authentication** for web clients
+- **API Key authentication** for service-to-service communication
+- **Role-based access control** (RBAC)
+- **Account security features** (password policies, account locking, etc.)
+- **Multiple authentication strategies** (flexible auth)
+
+### Authentication Roles
+
+- **ADMIN**: Full system access, user management
+- **USER**: Standard user access
+- **SERVICE**: Service-to-service communication
+- **READONLY**: Read-only access to resources
+
+### Default Admin Account
+
+A default admin account is created on first startup:
+- **Username**: `admin`
+- **Email**: `admin@esb.local`
+- **Password**: `Admin@123456`
+- ⚠️ **Important**: Change the default password after first login!
+
 ## API Documentation
+
+### Authentication Endpoints
+
+#### Register a New User
+```http
+POST /auth/register
+Content-Type: application/json
+
+{
+  "username": "john_doe",
+  "email": "john@example.com",
+  "password": "SecurePass@123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "role": "user"
+}
+```
+
+#### Login
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "username": "john_doe",
+  "password": "SecurePass@123"
+}
+```
+
+Response:
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "uuid",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "role": "user",
+    "status": "active"
+  },
+  "expiresIn": 3600
+}
+```
+
+#### Refresh Token
+```http
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Get User Profile
+```http
+GET /auth/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Change Password
+```http
+POST /auth/change-password
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "currentPassword": "SecurePass@123",
+  "newPassword": "NewSecurePass@456"
+}
+```
+
+#### Generate API Key
+```http
+POST /auth/generate-api-key
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "description": "API key for my service"
+}
+```
+
+Response:
+```json
+{
+  "apiKey": "a1b2c3d4e5f6...",
+  "message": "API key generated successfully. Please store it securely as it cannot be retrieved again."
+}
+```
+
+#### Forgot Password
+```http
+POST /auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+#### Reset Password
+```http
+POST /auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "newPassword": "NewSecurePass@456"
+}
+```
+
+### Authentication Methods
+
+#### JWT Bearer Token
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### API Key (Header)
+```http
+X-API-Key: your-api-key-here
+```
+
+#### API Key (Authorization Header)
+```http
+Authorization: ApiKey your-api-key-here
+```
+
+#### API Key (Query Parameter)
+```http
+GET /services?api_key=your-api-key-here
+```
+
+### Admin Endpoints
+
+#### Get All Users (Admin Only)
+```http
+GET /auth/users
+Authorization: Bearer admin-jwt-token
+```
+
+#### Update User (Admin Only)
+```http
+PUT /auth/users/{userId}
+Authorization: Bearer admin-jwt-token
+Content-Type: application/json
+
+{
+  "role": "service",
+  "status": "active"
+}
+```
+
+#### Delete User (Admin Only)
+```http
+DELETE /auth/users/{userId}
+Authorization: Bearer admin-jwt-token
+```
 
 ### Service Registry
 
@@ -511,11 +742,23 @@ DB_NAME=esb_db
 NODE_ENV=production
 PORT=4000
 
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
+JWT_EXPIRATION_TIME=3600
+JWT_REFRESH_EXPIRATION_TIME=604800
+
 # Redis Configuration
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-# Additional configurations...
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:3000,http://localhost:4000
+CORS_CREDENTIALS=true
 ```
 
 ### Production Deployment

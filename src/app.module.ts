@@ -2,11 +2,15 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { APP_GUARD } from '@nestjs/core';
 import { ServiceRegistryModule } from './service-registry/service-registry.module';
 import { ClientRegistryModule } from './client-registry/client-registry.module';
 import { MessageRoutingModule } from './message-routing/message-routing.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
 import { ServiceIntegrationModule } from './service-integration/service-integration.module';
+import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
+import { JwtAuthGuard } from './auth/guards/auth.guards';
 
 @Module({
   imports: [
@@ -26,11 +30,19 @@ import { ServiceIntegrationModule } from './service-integration/service-integrat
       dropSchema: false, // Never drop schema automatically
     }),
     EventEmitterModule.forRoot(),
+    AuthModule,
+    HealthModule,
     ServiceRegistryModule,
     ClientRegistryModule,
     MessageRoutingModule,
     OrchestrationModule,
     ServiceIntegrationModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}
