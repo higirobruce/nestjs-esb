@@ -9,6 +9,8 @@ A simple but scalable Enterprise Service Bus implementation using NestJS and Pos
 - **Message Routing**: Route messages based on patterns and conditions
 - **Orchestration**: Define and execute complex workflows
 - **Service Integration**: Direct HTTP calls to services without messaging
+- **Canonical Data Model (CDM)**: Unified data transformation and mapping framework
+
 
 ## Architecture
 
@@ -45,6 +47,12 @@ A simple but scalable Enterprise Service Bus implementation using NestJS and Pos
    - Client authentication and authorization integration
    - Correlation ID tracking across service calls
    - Configurable timeouts and circuit breaker patterns
+
+6. **Citizen Module** (Example Implementation)
+   - Demonstrates service-to-CDM coupling
+   - National Registry service integration
+   - Automatic data transformation to canonical format
+   - Standardized API endpoints for citizen data
 
 ## Setup
 
@@ -628,6 +636,157 @@ Response:
 }
 ```
 
+### Citizens (Service-CDM Integration Example)
+
+The Citizens module demonstrates how to couple an external service with the CDM transformation engine. This serves as a practical example of the adapter/facade pattern to create a 360-degree view of a citizen.
+
+#### Get Comprehensive Citizen Profile (360-Degree View)
+
+This endpoint orchestrates calls to multiple backend services (e.g., National Registry, DMV, Document Service) to aggregate a complete citizen profile.
+
+```http
+GET /citizens/{nationalId}/profile
+Authorization: Bearer jwt-token
+```
+
+Example Response:
+```json
+{
+  "citizen": {
+    "id": "national-registry-19900515-1234",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    ...
+  },
+  "vehicles": [
+    {
+      "vin": "123-ABC-789",
+      "licensePlate": "NATION-01",
+      "make": "GovernmentMotors",
+      "model": "OfficialSedan",
+      "year": 2024
+    }
+  ],
+  "documents": [
+    {
+      "documentId": "P12345678",
+      "documentType": "Passport",
+      "issuingAuthority": "Department of State",
+      "expirationDate": "2030-10-15T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Register the National Registry Service
+
+First, register the external service in the service registry:
+
+```http
+POST /services
+Content-Type: application/json
+
+{
+  "name": "national-registry-service",
+  "version": "1.0.0",
+  "endpoint": "https://api.nationalregistry.gov",
+  "healthCheck": {
+    "url": "https://api.nationalregistry.gov/health",
+    "interval": 30000,
+    "timeout": 5000
+  }
+}
+```
+
+#### Get Citizen by National ID
+
+```http
+GET /citizens/{nationalId}
+Authorization: Bearer jwt-token
+```
+
+Example:
+```http
+GET /citizens/19900515-1234
+```
+
+Response (in standardized CitizenCDM format):
+```json
+{
+  "id": "national-registry-19900515-1234",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "dateOfBirth": "1990-05-15T00:00:00.000Z",
+  "gender": "female",
+  "nationality": "Nationlander",
+  "addresses": [
+    {
+      "type": "home",
+      "line1": "123 Government Ave",
+      "city": "Capital City",
+      "postalCode": "10001",
+      "country": "Nationland",
+      "isPrimary": true
+    }
+  ],
+  "contactInfo": [
+    {
+      "type": "email",
+      "value": "jane.doe@example.com",
+      "isPrimary": true
+    }
+  ],
+  "metadata": {
+    "sourceSystem": "national-registry",
+    "sourceId": "19900515-1234",
+    "transformationHistory": [...]
+  }
+}
+```
+
+#### Search Citizens
+
+```http
+POST /citizens/search
+Content-Type: application/json
+Authorization: Bearer jwt-token
+
+{
+  "givenName": "Jane",
+  "familyName": "Doe",
+  "limit": 10,
+  "offset": 0
+}
+```
+
+#### Update Citizen Information
+
+```http
+PUT /citizens/{nationalId}
+Content-Type: application/json
+Authorization: Bearer jwt-token
+
+{
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "contactInfo": [
+    {
+      "type": "email",
+      "value": "jane.smith@example.com",
+      "isPrimary": true
+    }
+  ]
+}
+```
+
+#### Test Transformation (Development)
+
+```http
+GET /citizens/mock/transform
+```
+
+This endpoint demonstrates the transformation using mock data without calling external services.
+
 ### Service Integration Features
 
 #### Retry Logic
@@ -781,6 +940,99 @@ All services include health checks:
 - **PostgreSQL**: Connection test with `pg_isready`
 - **Redis**: Ping command
 - **Nginx**: Service availability check
+
+
+## Canonical Data Model (CDM)
+
+This ESB includes a powerful Canonical Data Model (CDM) to standardize data across different systems and formats. The CDM provides a unified structure for common business entities like citizens, ensuring data consistency and simplifying transformations between government agencies.
+
+### Key Components
+
+- **Core Types**: Foundational data structures for metadata, addresses, contact info, and more. Located in `src/canonical-data-model/types`.
+- **Schemas**: Concrete definitions for canonical models like `CitizenCDM`, `VehicleCDM`, `OfficialDocumentCDM`, and `PropertyCDM`. Located in `src/canonical-data-model/schemas`.
+- **Transformers**: Classes to convert data between external formats (e.g., a National Population Registry) and the CDM. Located in `src/canonical-data-model/transformers`.
+- **Validators**: Tools to ensure data integrity against the CDM schemas. Located in `src/canonical-data-model/validators`.
+
+### How to Use the CDM: A Government Context Example
+
+Here’s a practical example of how to use the CDM to transform citizen data from a hypothetical National Registry into the canonical format.
+
+#### 1. Import Necessary Components
+
+```typescript
+// This is a conceptual example. The actual transformer would need to be created.
+import {
+  NationalRegistryCitizenTransformer,
+  NationalRegistryCitizen,
+} from 'src/canonical-data-model/transformers/national-registry-citizen.transformer';
+import { CitizenCDM } from 'src/canonical-data-model/schemas/citizen.schema';
+import { TransformationContext } from 'src/canonical-data-model/transformers/base.transformer';
+import { CDMValidatorFactory } from 'src/canonical-data-model/validators/cdm.validator';
+```
+
+#### 2. Prepare Your Source Data
+
+This is a simplified example of a citizen data object from a National Registry system.
+
+```typescript
+const citizenData: NationalRegistryCitizen = {
+  NationalID: '19900515-1234',
+  GivenName: 'Jane',
+  FamilyName: 'Doe',
+  DateOfBirth: '1990-05-15',
+  Gender: 'Female',
+  ResidentialAddress: '123 Government Ave, Capital City, Nationland',
+  PostalCode: '10001',
+  CountryOfBirth: 'Nationland',
+  Nationality: 'Nationlander',
+  RegistrationDate: new Date().toISOString(),
+  LastUpdateDate: new Date().toISOString(),
+  ResidencyStatus: 'Permanent Resident',
+};
+```
+
+#### 3. Transform the Data to CDM
+
+Instantiate the transformer and call the `toCDM` method. The transformer would map fields like `GivenName` to `firstName` and `ResidentialAddress` to the canonical `Address` structure.
+
+```typescript
+async function transformData() {
+  const transformer = new NationalRegistryCitizenTransformer();
+
+  const context: TransformationContext = {
+    sourceSystem: 'NationalPopulationRegistry',
+    correlationId: 'req-abc-987',
+    timestamp: new Date(),
+  };
+
+  try {
+    const cdmCitizen: CitizenCDM = await transformer.toCDM(citizenData, context);
+    console.log('Successfully transformed to CDM:', cdmCitizen);
+    return cdmCitizen;
+  } catch (error) {
+    console.error('Transformation failed:', error);
+  }
+}
+```
+
+#### 4. Validate the Canonical Data
+
+After transformation, use the CDM validator to ensure data integrity, such as checking for a valid National ID format or a complete address.
+
+```typescript
+async function validateCDM(cdmCitizen: CitizenCDM) {
+  const validator = CDMValidatorFactory.createValidator('citizen');
+  const validationResult = await validator.validate(cdmCitizen);
+
+  if (validationResult.isValid) {
+    console.log('CDM data is valid.');
+  } else {
+    console.error('CDM data is invalid:', validationResult.errors);
+  }
+}
+```
+
+By leveraging the CDM, government agencies can create a robust and maintainable integration architecture that decouples systems and standardizes data exchange for improved public services.
 
 ## Production Considerations
 

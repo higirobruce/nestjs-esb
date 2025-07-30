@@ -8,6 +8,7 @@ import { ClientRegistryModule } from './client-registry/client-registry.module';
 import { MessageRoutingModule } from './message-routing/message-routing.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
 import { ServiceIntegrationModule } from './service-integration/service-integration.module';
+import { CitizenModule } from './citizen/citizen.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './auth/guards/auth.guards';
@@ -37,6 +38,7 @@ import { JwtAuthGuard } from './auth/guards/auth.guards';
     MessageRoutingModule,
     OrchestrationModule,
     ServiceIntegrationModule,
+    CitizenModule,
   ],
   providers: [
     {
