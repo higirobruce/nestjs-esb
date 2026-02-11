@@ -112,7 +112,7 @@ export class CitizenService {
       const response = await this.serviceIntegrationService.callService({
         serviceName: 'national-registry-service',
         method: HttpMethod.GET,
-        path: `/citizens/${nationalId}`,
+        path: `/citizens/national-id/${nationalId}`,
         correlationId: `citizen-fetch-${Date.now()}`,
         timeoutMs: 30000,
         maxRetries: 3,
@@ -244,9 +244,9 @@ export class CitizenService {
    */
   async transformMockCitizenData(): Promise<CitizenCDM> {
     const mockExternalData: NationalRegistryCitizen = {
-      NationalID: '19900515-1234',
+      nationalId: '19900515-1234',
       GivenName: 'Jane',
-      FamilyName: 'Doe',
+      firstName: 'Doe',
       DateOfBirth: '1990-05-15',
       Gender: 'Female',
       Email: 'jane.doe@example.com',

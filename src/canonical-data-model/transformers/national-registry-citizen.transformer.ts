@@ -9,10 +9,10 @@ import { ValidationResult, ValidationError } from '../types/core.types';
 
 // National Registry data structure (simplified)
 export interface NationalRegistryCitizen {
-  NationalID: string;
+  nationalId: string;
   GivenName: string;
-  FamilyName: string;
-  MiddleName?: string;
+  firstName: string;
+  lastName?: string;
   DateOfBirth: string;
   Gender?: string;
   Email?: string;
@@ -49,23 +49,23 @@ export class NationalRegistryCitizenTransformer extends BaseBidirectionalTransfo
     this.logTransformation('NationalRegistry', 'CDM', context);
 
     const cdmCitizen: CitizenCDM = {
-      id: `national-registry-${registryData.NationalID}`,
+      id: `national-registry-${registryData.nationalId}`,
       metadata: {
         sourceSystem: context?.sourceSystem || 'national-registry',
-        sourceId: registryData.NationalID,
+        sourceId: registryData.nationalId,
         timestamp: context?.timestamp || new Date(),
         version: this.getVersion(),
         correlationId: context?.correlationId,
         transformationHistory: [],
       },
-      createdAt: new Date(registryData.RegistrationDate),
+      createdAt: new Date(registryData.RegistrationDate) ,
       updatedAt: new Date(registryData.LastUpdateDate),
 
       // Core identification
       firstName: registryData.GivenName || '',
-      lastName: registryData.FamilyName || '',
-      middleName: registryData.MiddleName,
-      displayName: `${registryData.GivenName || ''} ${registryData.FamilyName || ''}`.trim(),
+      lastName: registryData.firstName || '',
+      middleName: registryData.lastName,
+      displayName: `${registryData.GivenName || ''} ${registryData.firstName || ''}`.trim(),
 
       // Demographics
       dateOfBirth: registryData.DateOfBirth ? new Date(registryData.DateOfBirth) : undefined,
@@ -93,7 +93,7 @@ export class NationalRegistryCitizenTransformer extends BaseBidirectionalTransfo
       externalIdentifiers: [
         {
           system: 'national-registry',
-          value: registryData.NationalID,
+          value: registryData.nationalId,
           type: 'national_id',
         },
       ],
@@ -166,9 +166,9 @@ export class NationalRegistryCitizenTransformer extends BaseBidirectionalTransfo
     )?.value;
 
     const registryData: NationalRegistryCitizen = {
-      NationalID: nationalId || cdm.metadata.sourceId,
+      nationalId: nationalId || cdm.metadata.sourceId,
       GivenName: cdm.firstName,
-      FamilyName: cdm.lastName,
+      firstName: cdm.lastName,
       Email: primaryEmail,
       Phone: primaryPhone,
       MobilePhone: mobilePhone,
@@ -213,7 +213,7 @@ export class NationalRegistryCitizenTransformer extends BaseBidirectionalTransfo
   async validateExternal(data: NationalRegistryCitizen): Promise<ValidationResult> {
     const errors: ValidationError[] = [];
 
-    if (!data.NationalID) {
+    if (!data.nationalId) {
       errors.push({
         field: 'NationalID',
         code: 'REQUIRED_FIELD_MISSING',
@@ -222,7 +222,7 @@ export class NationalRegistryCitizenTransformer extends BaseBidirectionalTransfo
       });
     }
 
-    if (!data.GivenName && !data.FamilyName) {
+    if (!data.GivenName && !data.firstName) {
       errors.push({
         field: 'name',
         code: 'REQUIRED_FIELD_MISSING',
