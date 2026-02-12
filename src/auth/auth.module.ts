@@ -13,11 +13,13 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { JwtAuthGuard } from './guards/auth.guards';
 import { RolesGuard } from './guards/roles.guard';
 import { UserSeeder } from './seeders/user.seeder';
+import { ClientRegistryModule } from '../client-registry/client-registry.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    ClientRegistryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {

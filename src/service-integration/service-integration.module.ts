@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { ServiceIntegrationController } from './service-integration.controller';
 import { ServiceIntegrationService } from './service-integration.service';
+import { ProjectionService } from './projection.service';
 import { ServiceCall } from './entities/service-call.entity';
 import { ServiceRegistryModule } from '../service-registry/service-registry.module';
 import { ClientRegistryModule } from '../client-registry/client-registry.module';
@@ -18,7 +19,7 @@ import { ClientRegistryModule } from '../client-registry/client-registry.module'
     ClientRegistryModule,
   ],
   controllers: [ServiceIntegrationController],
-  providers: [ServiceIntegrationService],
+  providers: [ServiceIntegrationService, ProjectionService],
   exports: [ServiceIntegrationService],
 })
 export class ServiceIntegrationModule {}

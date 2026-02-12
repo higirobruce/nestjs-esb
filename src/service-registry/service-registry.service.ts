@@ -43,6 +43,13 @@ export class ServiceRegistryService {
     return service;
   }
 
+  async getServicesByName(name: string): Promise<Service[]> {
+    return this.serviceRepository.find({
+      where: { name },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async getAllServices(): Promise<Service[]> {
     return this.serviceRepository.find();
   }

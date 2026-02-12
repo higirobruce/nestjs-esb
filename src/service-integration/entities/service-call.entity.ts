@@ -70,6 +70,12 @@ export class ServiceCall {
   @Column({ name: 'response_body', type: 'jsonb', nullable: true })
   responseBody: any;
 
+  @Column({ name: 'projected_response_body', type: 'jsonb', nullable: true })
+  projectedResponseBody: any;
+
+  @Column({ name: 'requested_fields', type: 'simple-array', nullable: true })
+  requestedFields: string[];
+
   @Column({ name: 'status', type: 'enum', enum: CallStatus, default: CallStatus.PENDING })
   status: CallStatus;
 

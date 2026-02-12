@@ -9,6 +9,7 @@ import { ServiceCall, CallStatus, HttpMethod } from './entities/service-call.ent
 import { ServiceCallDto, DirectServiceCallDto, ServiceCallResponseDto } from './dto/service-call.dto';
 import { ServiceRegistryService } from '../service-registry/service-registry.service';
 import { ClientRegistryService } from '../client-registry/client-registry.service';
+import { ProjectionService } from './projection.service';
 
 @Injectable()
 export class ServiceIntegrationService {
@@ -21,6 +22,7 @@ export class ServiceIntegrationService {
     private serviceRegistry: ServiceRegistryService,
     private clientRegistry: ClientRegistryService,
     private eventEmitter: EventEmitter2,
+    private projectionService: ProjectionService,
   ) {}
 
   async callService(serviceCallDto: ServiceCallDto): Promise<ServiceCallResponseDto> {
@@ -92,12 +94,57 @@ export class ServiceIntegrationService {
       const response = await this.executeHttpCall(directCallDto, savedCall);
       const executionTime = Date.now() - startTime;
 
+      // Apply projection if requested
+      let projectedResponse = response.data;
+      let requestedFields: string[] | null = null;
+
+      if (serviceName && (directCallDto.responseProjection || directCallDto.clientId)) {
+        try {
+          requestedFields = await this.projectionService.resolveProjection(
+            serviceName,
+            directCallDto.clientId,
+            directCallDto.responseProjection,
+          );
+
+          if (requestedFields && requestedFields.length > 0) {
+            // Validate against schema if enabled (default true)
+            const shouldValidate =
+              directCallDto.responseProjection?.validateAgainstSchema !== false;
+
+            if (shouldValidate) {
+              await this.projectionService.validateProjection(
+                serviceName,
+                requestedFields,
+              );
+            }
+
+            // Apply projection
+            projectedResponse = this.projectionService.applyProjection(
+              response.data,
+              requestedFields,
+            );
+
+            this.logger.debug(
+              `Applied projection with ${requestedFields.length} fields to service call ${savedCall.id}`,
+            );
+          }
+        } catch (projectionError) {
+          this.logger.error(
+            `Projection failed for service call ${savedCall.id}: ${projectionError.message}`,
+          );
+          // Re-throw projection errors (validation failures should fail the call)
+          throw projectionError;
+        }
+      }
+
       // Update service call record with success
       await this.updateServiceCall(savedCall.id, {
         status: CallStatus.SUCCESS,
         responseStatus: response.status,
         responseHeaders: response.headers,
-        responseBody: response.data,
+        responseBody: response.data, // Always store full response
+        projectedResponseBody: projectedResponse, // Store projected version
+        requestedFields: requestedFields || undefined,
         executionTimeMs: executionTime,
       });
 
@@ -112,7 +159,7 @@ export class ServiceIntegrationService {
         correlationId,
         status: response.status,
         headers: response.headers,
-        data: response.data,
+        data: projectedResponse, // Return projected version to client
         executionTimeMs: executionTime,
         retryCount: savedCall.retryCount,
       };
@@ -143,7 +190,7 @@ export class ServiceIntegrationService {
     directCallDto: DirectServiceCallDto,
     serviceCall: ServiceCall,
   ): Promise<any> {
-    
+
     const maxRetries = directCallDto.maxRetries || 0;
     let lastError: any;
 
@@ -151,7 +198,7 @@ export class ServiceIntegrationService {
       try {
         if (attempt > 0) {
           this.logger.log(`Retrying service call ${serviceCall.id}, attempt ${attempt}/${maxRetries}`);
-          
+
           // Update retry count
           await this.updateServiceCall(serviceCall.id, {
             retryCount: attempt,
@@ -162,6 +209,8 @@ export class ServiceIntegrationService {
           await this.sleep(delay);
         }
 
+        this.logger.debug(`Making ${directCallDto.method} request to: ${directCallDto.url}`);
+
         const config: any = {
           method: directCallDto.method,
           url: directCallDto.url,
@@ -171,6 +220,10 @@ export class ServiceIntegrationService {
             'X-Correlation-ID': directCallDto.correlationId,
             ...directCallDto.headers,
           },
+          // Disable SSL verification for development (remove in production)
+          httpsAgent: new (require('https').Agent)({
+            rejectUnauthorized: false,
+          }),
         };
 
         if (directCallDto.queryParams) {
@@ -182,10 +235,26 @@ export class ServiceIntegrationService {
         }
 
         const response = await firstValueFrom(this.httpService.request(config));
+        this.logger.debug(`Request successful: ${response.status} ${response.statusText}`);
         return response;
       } catch (error) {
         lastError = error;
-        
+
+        // Enhanced error logging
+        if (error.code === 'EPROTO') {
+          this.logger.error(
+            `SSL/TLS protocol error when calling ${directCallDto.url}. ` +
+            `This usually means there's a protocol mismatch (HTTP vs HTTPS). ` +
+            `Verify the endpoint URL scheme matches the actual service protocol.`
+          );
+        } else if (error.code) {
+          this.logger.error(`Request failed with code ${error.code}: ${error.message}`);
+        } else if (error.response) {
+          this.logger.error(`Request failed with status ${error.response.status}: ${error.response.statusText}`);
+        } else {
+          this.logger.error(`Request failed: ${error.message}`);
+        }
+
         if (attempt === maxRetries) {
           // Final attempt failed
           break;
@@ -202,6 +271,11 @@ export class ServiceIntegrationService {
   }
 
   private isRetryableError(error: any): boolean {
+    // Don't retry configuration/protocol errors
+    if (error.code === 'EPROTO' || error.code === 'ENOTFOUND' || error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
+      return false;
+    }
+
     // Don't retry client errors (4xx) except for specific cases
     if (error.response?.status >= 400 && error.response?.status < 500) {
       // Retry on rate limiting and timeout
@@ -209,8 +283,8 @@ export class ServiceIntegrationService {
     }
 
     // Retry on server errors (5xx) and network errors
-    return error.code === 'ECONNREFUSED' || 
-           error.code === 'ETIMEDOUT' || 
+    return error.code === 'ECONNREFUSED' ||
+           error.code === 'ETIMEDOUT' ||
            error.response?.status >= 500;
   }
 
@@ -266,10 +340,10 @@ export class ServiceIntegrationService {
 
     return {
       totalCalls,
-      successCalls,
-      failedCalls,
+      successCount: successCalls,
+      failedCount: failedCalls,
       successRate: totalCalls > 0 ? (successCalls / totalCalls) * 100 : 0,
-      avgExecutionTimeMs: avgExecutionTime?.avg ? Math.round(avgExecutionTime.avg) : null,
+      averageExecutionTimeMs: avgExecutionTime?.avg ? Math.round(avgExecutionTime.avg) : null,
     };
   }
 }

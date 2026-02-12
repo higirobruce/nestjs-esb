@@ -1,5 +1,7 @@
-import { IsString, IsOptional, IsEnum, IsObject, IsNumber, Min, Max, IsUrl, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsObject, IsNumber, Min, Max, IsUrl, IsNotEmpty, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { HttpMethod } from '../entities/service-call.entity';
+import { ResponseProjectionDto } from './projection.dto';
 
 export class ServiceCallDto {
   @IsString()
@@ -47,6 +49,11 @@ export class ServiceCallDto {
   @Max(300000)
   @IsOptional()
   timeoutMs?: number = 30000;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ResponseProjectionDto)
+  responseProjection?: ResponseProjectionDto;
 }
 
 export class DirectServiceCallDto {
@@ -87,6 +94,11 @@ export class DirectServiceCallDto {
   @Max(300000)
   @IsOptional()
   timeoutMs?: number = 30000;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ResponseProjectionDto)
+  responseProjection?: ResponseProjectionDto;
 }
 
 export class ServiceCallResponseDto {

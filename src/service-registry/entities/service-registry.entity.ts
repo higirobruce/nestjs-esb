@@ -77,6 +77,15 @@ export class Service {
     contractType?: ContractType;
   };
 
+  // ========== PROJECTION PRESETS (JSONB) ==========
+  @Column('jsonb', { nullable: true })
+  projectionPresets: {
+    minimal?: string[];
+    standard?: string[];
+    detailed?: string[];
+    [key: string]: string[];
+  };
+
   // ========== SEMANTICS (JSONB) ==========
   @Column('jsonb', { nullable: true })
   semanticsConfig: {

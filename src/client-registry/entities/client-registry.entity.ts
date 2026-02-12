@@ -26,6 +26,14 @@ export class Client {
   @Column('jsonb', { nullable: true })
   metadata: Record<string, any>;
 
+  @Column('jsonb', { nullable: true })
+  defaultProjections: {
+    [serviceName: string]: {
+      preset?: string;
+      fields?: string[];
+    };
+  };
+
   @CreateDateColumn()
   createdAt: Date;
 

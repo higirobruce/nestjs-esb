@@ -11,7 +11,7 @@ import { ServiceIntegrationModule } from './service-integration/service-integrat
 import { CitizenModule } from './citizen/citizen.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
-import { JwtAuthGuard } from './auth/guards/auth.guards';
+import { FlexibleAuthGuard } from './auth/guards/auth.guards';
 
 @Module({
   imports: [
@@ -43,7 +43,7 @@ import { JwtAuthGuard } from './auth/guards/auth.guards';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: FlexibleAuthGuard,
     },
   ],
 })
