@@ -1,6 +1,8 @@
 import { Controller, Post, Get, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { ServiceRegistryService } from './service-registry.service';
 import { RegisterServiceDto } from './dto/register-service.dto';
+import { UpdateServiceDto } from './dto/update-service-registry.dto';
+import { QueryServiceDto } from './dto/query-service.dto';
 import { ServiceStatus } from '../common/enums/service-status.enum';
 import { FlexibleAuth, AdminOrService, Public } from '../auth/decorators/auth.decorators';
 
@@ -43,5 +45,17 @@ export class ServiceRegistryController {
   async unregisterService(@Param('id') id: string) {
     await this.serviceRegistryService.unregisterService(id);
     return { message: 'Service unregistered successfully' };
+  }
+
+  @FlexibleAuth()
+  @Get('query')
+  async queryServices(@Query() query: QueryServiceDto) {
+    return this.serviceRegistryService.queryServices(query);
+  }
+
+  @AdminOrService()
+  @Patch(':id')
+  async updateService(@Param('id') id: string, @Body() updateDto: UpdateServiceDto) {
+    return this.serviceRegistryService.updateService(id, updateDto);
   }
 }

@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RegisterServiceDto } from './dto/register-service.dto';
-import { ServiceStatus } from '../common/enums/service-status.enum';
+import { UpdateServiceDto } from './dto/update-service-registry.dto';
+import { QueryServiceDto } from './dto/query-service.dto';
+import { ServiceStatus, Environment, ProtocolType } from '../common/enums';
 import { Service } from './entities/service-registry.entity';
 
 @Injectable()
@@ -77,5 +79,44 @@ export class ServiceRegistryService {
     await this.serviceRepository.update(id, {
       lastHealthCheck: new Date(),
     });
+  }
+
+  async getServicesByEnvironment(environment: Environment): Promise<Service[]> {
+    return this.serviceRepository.find({ where: { environment } });
+  }
+
+  async getServicesByProtocol(protocol: ProtocolType): Promise<Service[]> {
+    return this.serviceRepository.find({ where: { protocol } });
+  }
+
+  async getServicesByOwner(ownerSystem: string): Promise<Service[]> {
+    return this.serviceRepository.find({ where: { ownerSystem } });
+  }
+
+  async queryServices(query: QueryServiceDto): Promise<Service[]> {
+    const whereClause: any = {};
+
+    if (query.name) whereClause.name = query.name;
+    if (query.version) whereClause.version = query.version;
+    if (query.status) whereClause.status = query.status;
+    if (query.environment) whereClause.environment = query.environment;
+    if (query.protocol) whereClause.protocol = query.protocol;
+    if (query.ownerSystem) whereClause.ownerSystem = query.ownerSystem;
+    if (query.invocationRole) whereClause.invocationRole = query.invocationRole;
+
+    return this.serviceRepository.find({ where: whereClause });
+  }
+
+  async updateService(id: string, updateDto: UpdateServiceDto): Promise<Service> {
+    const service = await this.serviceRepository.findOne({ where: { id } });
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    Object.assign(service, updateDto);
+    const updatedService = await this.serviceRepository.save(service);
+
+    this.eventEmitter.emit('service.updated', updatedService);
+    return updatedService;
   }
 }

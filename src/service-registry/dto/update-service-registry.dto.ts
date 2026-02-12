@@ -1,4 +1,4 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateServiceRegistryDto } from './create-service-registry.dto';
+import { RegisterServiceDto } from './register-service.dto';
 
-export class UpdateServiceRegistryDto extends PartialType(CreateServiceRegistryDto) {}
+export class UpdateServiceDto extends PartialType(RegisterServiceDto) {}
